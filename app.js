@@ -1,5 +1,12 @@
 require('dotenv').config();
 
+// Usa o DNS público do Google para resolver o registro SRV do MongoDB Atlas.
+// Algumas redes/roteadores bloqueiam consultas DNS SRV do provedor padrão,
+// o que quebra a string de conexao "mongodb+srv://" com ECONNREFUSED.
+// Isso afeta só a resolução de DNS deste processo Node, sem mexer em
+// nenhuma configuração do sistema operacional.
+require('dns').setServers(['8.8.8.8', '8.8.4.4']);
+
 const express = require('express');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
