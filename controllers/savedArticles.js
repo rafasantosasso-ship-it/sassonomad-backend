@@ -2,6 +2,7 @@ const SavedArticle = require('../models/savedArticle');
 const BadRequestError = require('../errors/BadRequestError');
 const NotFoundError = require('../errors/NotFoundError');
 const ForbiddenError = require('../errors/ForbiddenError');
+const MESSAGES = require('../utils/messages');
 
 module.exports.getSavedArticles = (req, res, next) => {
   SavedArticle.find({ owner: req.user._id })
@@ -26,7 +27,7 @@ module.exports.createSavedArticle = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        return next(new BadRequestError('Dados inválidos para salvar o artigo'));
+        return next(new BadRequestError(MESSAGES.INVALID_ARTICLE_DATA));
       }
       return next(err);
     });
@@ -39,10 +40,10 @@ module.exports.deleteSavedArticle = (req, res, next) => {
     .select('+owner')
     .then((article) => {
       if (!article) {
-        return Promise.reject(new NotFoundError('Artigo não encontrado'));
+        return Promise.reject(new NotFoundError(MESSAGES.ARTICLE_NOT_FOUND));
       }
       if (article.owner.toString() !== req.user._id) {
-        return Promise.reject(new ForbiddenError('Você não pode remover um artigo salvo por outro usuário'));
+        return Promise.reject(new ForbiddenError(MESSAGES.ARTICLE_FORBIDDEN));
       }
       return article.deleteOne().then(() => {
         const { owner, ...rest } = article.toObject();

@@ -32,6 +32,12 @@ Protegidas (exigem `Authorization: Bearer <token>`):
 - `POST /articles` — salva um guia/artigo (`keyword`, `title`, `text`, `date`, `fonte`, `link`, `image`)
 - `DELETE /articles/:articleId` — remove um item salvo (só o dono pode remover o seu)
 
+## Segurança
+
+- Helmet define cabeçalhos de segurança padrão.
+- Rate limit: no máximo 100 solicitações por IP a cada 15 minutos (`middlewares/rateLimiter.js`).
+- Senhas armazenadas com hash (bcrypt), nunca em texto puro; a API nunca devolve o hash pro cliente.
+
 ## Logs
 
 `request.log` (todas as solicitações) e `error.log` (erros), em JSON, gerados na raiz do projeto ao rodar — não vão pro repositório (`.gitignore`).
