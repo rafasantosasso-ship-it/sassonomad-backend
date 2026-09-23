@@ -44,4 +44,14 @@ Protegidas (exigem `Authorization: Bearer <token>`):
 
 ## Domínio de produção
 
-_A preencher após o deploy._
+- API: `https://api.sassonomad.com`
+- Front-end que consome esta API: `https://sassonomad.com`
+
+### Infraestrutura
+
+- Google Cloud Compute Engine (VM `e2-micro`, Debian 13, free tier).
+- Processo gerenciado com **PM2** (`pm2 start app.js --name sassonomad-api`), com `pm2 startup` + `pm2 save` configurados para o processo voltar sozinho depois de um reboot da VM.
+- **Nginx** como reverse proxy: `api.sassonomad.com` → `localhost:3000` (o front-end fica em outro server block, servindo os arquivos estáticos do build).
+- HTTPS via **Let's Encrypt / Certbot** (`certbot --nginx`), com renovação automática.
+- Variáveis de ambiente (`MONGODB_URI`, `JWT_SECRET`, `PORT`) configuradas em produção via `.env` na raiz do projeto na VM (não versionado).
+- Banco de dados: MongoDB Atlas (cluster com IP da VM liberado no Network Access).
