@@ -2,8 +2,10 @@
 // (é o que funciona em Gmail, Outlook e Apple Mail) e sempre uma versão em
 // texto puro — ajuda a não cair no spam.
 //
-// Cores da marca: creme #f4eee1, areia #e3d2aa, terracota #c1623b,
-// terracota escuro #924a2d, texto #1c2321.
+// Paleta do site: oliva #6e7350 (cabeçalho, rodapé, botões), creme
+// #f4eee1 (fundo), terracota #c1623b (só no nome da pessoa), texto #1c2321.
+// O logo é um PNG servido pelo próprio site (public/email/logo-light.png):
+// Gmail e Outlook não mostram SVG.
 
 const { FRONTEND_URL } = require('../utils/config');
 
@@ -17,17 +19,22 @@ const escapeHtml = (value) => String(value)
 const SERIF = "Georgia, 'Times New Roman', serif";
 const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
+const OLIVE = '#6e7350';
+const OLIVE_DARK = '#565a3e';
+const CREAM = '#f4eee1';
+const LOGO_URL = `${FRONTEND_URL}/email/logo-light.png`;
+
 const button = (href, label) => `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;">
   <tr>
-    <td style="border-radius:999px;background-color:#c1623b;">
-      <a href="${href}" style="display:inline-block;padding:14px 30px;font-family:${SANS};font-size:15px;font-weight:bold;color:#1c2321;text-decoration:none;border-radius:999px;">${label}</a>
+    <td style="border-radius:999px;background-color:${OLIVE};">
+      <a href="${href}" style="display:inline-block;padding:14px 30px;font-family:${SANS};font-size:15px;font-weight:bold;color:${CREAM};text-decoration:none;border-radius:999px;">${label}</a>
     </td>
   </tr>
 </table>`;
 
 const sectionTitle = (text) => `
-<p style="margin:36px 0 14px;font-family:${SANS};font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#924a2d;font-weight:bold;">${text}</p>`;
+<p style="margin:36px 0 14px;padding-top:20px;border-top:1px solid #e3d2aa;font-family:${SANS};font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${OLIVE};font-weight:bold;">${text}</p>`;
 
 const linkItem = ({ href, title, text }) => `
 <tr>
@@ -57,17 +64,19 @@ const layout = ({ preheader, body, footer }) => `<!doctype html>
     <td align="center" style="padding:32px 16px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
         <tr>
-          <td style="padding:0 0 24px;font-family:${SERIF};font-size:22px;letter-spacing:4px;color:#1c2321;text-transform:uppercase;">
-            Sasso <span style="color:#c1623b;">&#9650;</span> Nomad
+          <td align="center" style="background-color:${OLIVE};border-radius:12px 12px 0 0;padding:28px 24px;">
+            <a href="${FRONTEND_URL}" style="text-decoration:none;">
+              <img src="${LOGO_URL}" width="190" alt="Sasso Nomad" style="display:block;width:190px;max-width:100%;height:auto;border:0;font-family:${SERIF};font-size:22px;letter-spacing:4px;color:${CREAM};text-transform:uppercase;">
+            </a>
           </td>
         </tr>
         <tr>
-          <td style="background-color:#ffffff;border-radius:12px;padding:36px 32px;font-family:${SANS};font-size:16px;line-height:1.65;color:#1c2321;">
+          <td style="background-color:#ffffff;padding:36px 32px;font-family:${SANS};font-size:16px;line-height:1.65;color:#1c2321;">
             ${body}
           </td>
         </tr>
         <tr>
-          <td style="padding:24px 8px 0;font-family:${SANS};font-size:12px;line-height:1.6;color:#5b6660;">
+          <td style="background-color:${OLIVE};border-radius:0 0 12px 12px;padding:22px 32px;font-family:${SANS};font-size:12px;line-height:1.7;color:${CREAM};">
             ${footer}
           </td>
         </tr>
@@ -82,7 +91,10 @@ const layout = ({ preheader, body, footer }) => `<!doctype html>
 // Boas-vindas: confirma o e-mail, libera a criação da conta e apresenta
 // o que já existe no site (funciona como a primeira newsletter).
 // ---------------------------------------------------------------------
-const firstNameOf = (name) => String(name).trim().split(/\s+/)[0];
+const firstNameOf = (name) => {
+  const first = String(name).trim().split(/\s+/)[0];
+  return first.charAt(0).toLocaleUpperCase('pt-BR') + first.slice(1);
+};
 
 module.exports.welcomeEmail = ({ name, confirmUrl, unsubscribeUrl }) => {
   const firstName = firstNameOf(name);
@@ -157,7 +169,7 @@ module.exports.welcomeEmail = ({ name, confirmUrl, unsubscribeUrl }) => {
 <p style="margin:0 0 16px;">A Sasso Nomad é sobre viajar devagar: ficar tempo suficiente num lugar pra saber quanto custa o café, qual praia enche no domingo e onde dá pra trabalhar com wi-fi que presta. Tudo com números reais e rota real. Nada de roteiro patrocinado.</p>
 <p style="margin:0;">Falta só um passo: confirmar que esse e-mail é seu. Na mesma página você pode criar uma senha para salvar guias e artigos no site.</p>
 ${button(confirmUrl, 'Confirmar meu e-mail')}
-<p style="margin:0;font-size:13px;color:#5b6660;">O link vale por 48 horas. Se o botão não funcionar, copie e cole no navegador:<br><a href="${confirmUrl}" style="color:#924a2d;word-break:break-all;">${confirmUrl}</a></p>
+<p style="margin:0;font-size:13px;color:#5b6660;">O link vale por 48 horas. Se o botão não funcionar, copie e cole no navegador:<br><a href="${confirmUrl}" style="color:${OLIVE_DARK};word-break:break-all;">${confirmUrl}</a></p>
 
 ${sectionTitle('Guias')}
 ${linkList(guides)}
@@ -173,10 +185,10 @@ ${sectionTitle('O que vem por aí')}
 <p style="margin:28px 0 0;">Até já,<br><span style="font-family:${SERIF};font-size:18px;">Sasso Nomad</span></p>`;
 
   const footer = `
-Você recebeu este e-mail porque se cadastrou em <a href="${site}" style="color:#5b6660;">sassonomad.com</a>.
+Você recebeu este e-mail porque se cadastrou em <a href="${site}" style="color:#f4eee1;">sassonomad.com</a>.
 Se não foi você, é só ignorar: sem confirmação, não enviamos mais nada.<br>
-<a href="${unsubscribeUrl}" style="color:#5b6660;">Cancelar inscrição</a> ·
-<a href="${site}/privacidade" style="color:#5b6660;">Privacidade</a>`;
+<a href="${unsubscribeUrl}" style="color:#f4eee1;">Cancelar inscrição</a> ·
+<a href="${site}/privacidade" style="color:#f4eee1;">Privacidade</a>`;
 
   const listText = (items) => items.map((i) => `- ${i.title}\n  ${i.href}`).join('\n');
 
@@ -232,10 +244,10 @@ module.exports.passwordResetEmail = ({ name, resetUrl }) => {
 <p style="margin:0 0 18px;font-family:${SERIF};font-size:24px;line-height:1.3;">Oi, <span style="color:#c1623b;font-style:italic;">${safeName}</span>.</p>
 <p style="margin:0;">Alguém pediu para criar uma nova senha para a sua conta na Sasso Nomad. Se foi você, é só clicar abaixo.</p>
 ${button(resetUrl, 'Criar nova senha')}
-<p style="margin:0 0 16px;font-size:13px;color:#5b6660;">O link vale por 1 hora e só funciona uma vez. Se o botão não funcionar, copie e cole no navegador:<br><a href="${resetUrl}" style="color:#924a2d;word-break:break-all;">${resetUrl}</a></p>
+<p style="margin:0 0 16px;font-size:13px;color:#5b6660;">O link vale por 1 hora e só funciona uma vez. Se o botão não funcionar, copie e cole no navegador:<br><a href="${resetUrl}" style="color:${OLIVE_DARK};word-break:break-all;">${resetUrl}</a></p>
 <p style="margin:0;font-size:14px;color:#5b6660;">Não foi você? Pode ignorar este e-mail: sua senha continua a mesma.</p>`;
 
-  const footer = `E-mail automático da conta em <a href="${FRONTEND_URL}" style="color:#5b6660;">sassonomad.com</a>.`;
+  const footer = `E-mail automático da conta em <a href="${FRONTEND_URL}" style="color:#f4eee1;">sassonomad.com</a>.`;
 
   const text = `Oi, ${firstName}.
 

@@ -188,13 +188,27 @@ const unsubscribePage = (title, text, form = '') => `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title} · Sasso Nomad</title></head>
 <body style="margin:0;background:#f4eee1;font-family:Helvetica,Arial,sans-serif;color:#1c2321;">
-<main style="max-width:480px;margin:12vh auto;padding:36px 28px;background:#fff;border-radius:12px;">
-<p style="margin:0 0 20px;font-family:Georgia,serif;letter-spacing:4px;text-transform:uppercase;">Sasso <span style="color:#c1623b;">&#9650;</span> Nomad</p>
+<main style="max-width:480px;margin:10vh auto;padding:0 16px;">
+<div style="background:#6e7350;border-radius:12px 12px 0 0;padding:26px 24px;text-align:center;">
+<a href="${FRONTEND_URL}"><img src="${FRONTEND_URL}/email/logo-light.png" width="180" alt="Sasso Nomad" style="display:inline-block;width:180px;max-width:100%;height:auto;border:0;color:#f4eee1;"></a>
+</div>
+<div style="background:#fff;border-radius:0 0 12px 12px;padding:32px 28px;">
 <h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 12px;">${title}</h1>
 <p style="line-height:1.6;margin:0 0 20px;color:#5b6660;">${text}</p>
 ${form}
-<p style="margin:24px 0 0;"><a href="${FRONTEND_URL}" style="color:#924a2d;">Voltar para sassonomad.com</a></p>
+<p style="margin:24px 0 0;"><a href="${FRONTEND_URL}" style="color:#565a3e;">Voltar para sassonomad.com</a></p>
+</div>
 </main></body></html>`;
+
+// A página vem da API (api.sassonomad.com), mas o logo está no site: libera
+// só essa origem para imagens, mantendo o resto da política do Helmet.
+const sendPage = (res, html, status = 200) => res
+  .status(status)
+  .set(
+    'Content-Security-Policy',
+    `default-src 'self'; img-src 'self' ${FRONTEND_URL}; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'`,
+  )
+  .send(html);
 
 // GET /unsubscribe?token=... — link do rodapé do e-mail.
 // Não descadastra direto no GET: filtros de e-mail corporativo "clicam"
@@ -205,18 +219,18 @@ module.exports.unsubscribeForm = async (req, res, next) => {
   try {
     const subscriber = token && await Subscriber.findOne({ unsubscribeToken: token });
     if (!subscriber) {
-      return res.status(404).send(unsubscribePage(
+      return sendPage(res, unsubscribePage(
         'Link inválido',
         'Não encontramos essa inscrição. Se quiser sair da lista, responda qualquer e-mail nosso com "cancelar".',
-      ));
+      ), 404);
     }
     if (subscriber.status === 'unsubscribed') {
-      return res.send(unsubscribePage('Tudo certo', 'Esse e-mail já não recebe mais nossas mensagens.'));
+      return sendPage(res, unsubscribePage('Tudo certo', 'Esse e-mail já não recebe mais nossas mensagens.'));
     }
     const form = `<form method="post" action="/unsubscribe?token=${escapeHtml(token)}">
-<button type="submit" style="padding:12px 26px;border:none;border-radius:999px;background:#c1623b;color:#1c2321;font-weight:bold;font-size:15px;cursor:pointer;">Cancelar inscrição</button>
+<button type="submit" style="padding:12px 26px;border:none;border-radius:999px;background:#6e7350;color:#f4eee1;font-weight:bold;font-size:15px;cursor:pointer;">Cancelar inscrição</button>
 </form>`;
-    return res.send(unsubscribePage(
+    return sendPage(res, unsubscribePage(
       'Cancelar inscrição?',
       `Você não vai mais receber os e-mails da Sasso Nomad em <strong>${escapeHtml(subscriber.email)}</strong>. Se tiver conta no site, ela continua funcionando.`,
       form,
@@ -242,9 +256,9 @@ module.exports.unsubscribe = async (req, res, next) => {
       await subscriber.save();
     }
     if (!subscriber) {
-      return res.status(404).send(unsubscribePage('Link inválido', 'Não encontramos essa inscrição.'));
+      return sendPage(res, unsubscribePage('Link inválido', 'Não encontramos essa inscrição.'), 404);
     }
-    return res.send(unsubscribePage(
+    return sendPage(res, unsubscribePage(
       'Inscrição cancelada',
       'Pronto: você não vai mais receber nossos e-mails. Mudou de ideia? É só se cadastrar de novo no site.',
     ));
