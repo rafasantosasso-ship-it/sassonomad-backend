@@ -55,7 +55,10 @@ const validateTokenAndPassword = celebrate({
 });
 
 const validateForgotPassword = celebrate({
-  body: Joi.object().keys({ email }),
+  body: Joi.object().keys({
+    email,
+    lang: Joi.string().valid('pt', 'it', 'en').default('pt'),
+  }),
 });
 
 const validateSavedArticle = celebrate({
