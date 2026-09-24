@@ -25,6 +25,18 @@ Públicas (sem autorização):
 - `POST /signup` — cria um usuário (`email`, `password`, `name`)
 - `POST /signin` — verifica `email`/`password` e devolve um `{ token }` (JWT)
 
+Comunidade / newsletter (públicas):
+
+- `POST /subscribe` — cadastro do popup (`name`, `email`, `consent: true`, opcionais `lang`, `source`). Salva o inscrito como `pending` e envia na hora o e-mail de boas-vindas com o link de confirmação (48h). Responde sempre a mesma mensagem, para não revelar quem já está na lista.
+- `POST /subscribe/confirm` — confirma o e-mail a partir do link (`token`). Devolve `name`, `email` e `hasAccount`.
+- `POST /subscribe/create-account` — cria a conta com a senha escolhida (`token`, `password`) e devolve um `{ token }` (JWT).
+- `GET /unsubscribe?token=...` — página de cancelar inscrição (link do rodapé dos e-mails); `POST` no mesmo endereço cancela (inclui o one-click do Gmail).
+- `POST /password/forgot` — envia o link de nova senha (1h). `POST /password/reset` — troca a senha (`token`, `password`) e devolve um JWT.
+
+Admin:
+
+- `GET /admin/stats` — totais da lista (confirmados, pendentes, cancelados, últimos 7/30 dias, por idioma e origem, 10 mais recentes). Exige o cabeçalho `x-admin-key` igual ao `ADMIN_KEY` do `.env`.
+
 Protegidas (exigem `Authorization: Bearer <token>`):
 
 - `GET /users/me` — dados do usuário logado (`email`, `name`)
@@ -37,6 +49,9 @@ Protegidas (exigem `Authorization: Bearer <token>`):
 - Helmet define cabeçalhos de segurança padrão.
 - Rate limit: no máximo 100 solicitações por IP a cada 15 minutos (`middlewares/rateLimiter.js`).
 - Senhas armazenadas com hash (bcrypt), nunca em texto puro; a API nunca devolve o hash pro cliente.
+- Rotas que enviam e-mail (`/subscribe`, `/password/forgot`): no máximo 5 por IP a cada 15 minutos, e o mesmo endereço só recebe um novo e-mail a cada 10 minutos.
+- Links de e-mail usam tokens aleatórios de uso único; no banco fica só o hash SHA-256.
+- Double opt-in e consentimento registrado (`consentAt`) para o GDPR; todo e-mail tem link de cancelar inscrição.
 
 ## Logs
 
@@ -53,5 +68,5 @@ Protegidas (exigem `Authorization: Bearer <token>`):
 - Processo gerenciado com **PM2** (`pm2 start app.js --name sassonomad-api`), com `pm2 startup` + `pm2 save` configurados para o processo voltar sozinho depois de um reboot da VM.
 - **Nginx** como reverse proxy: `api.sassonomad.com` → `localhost:3000` (o front-end fica em outro server block, servindo os arquivos estáticos do build).
 - HTTPS via **Let's Encrypt / Certbot** (`certbot --nginx`), com renovação automática.
-- Variáveis de ambiente (`MONGODB_URI`, `JWT_SECRET`, `PORT`) configuradas em produção via `.env` na raiz do projeto na VM (não versionado).
+- Variáveis de ambiente (`MONGODB_URI`, `JWT_SECRET`, `PORT`, `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `FRONTEND_URL`, `API_URL`, `ADMIN_KEY`) configuradas em produção via `.env` na raiz do projeto na VM (não versionado).
 - Banco de dados: MongoDB Atlas (cluster com IP da VM liberado no Network Access).
