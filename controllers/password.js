@@ -5,8 +5,9 @@ const BadRequestError = require('../errors/BadRequestError');
 const { sendEmail } = require('../utils/mailer');
 const { createToken, hashToken } = require('../utils/tokens');
 const { passwordResetEmail } = require('../emails/templates');
-const { JWT_SECRET, FRONTEND_URL } = require('../utils/config');
+const { JWT_SECRET } = require('../utils/config');
 const MESSAGES = require('../utils/messages');
+const { siteUrl } = require('../utils/siteRoutes');
 
 const SALT_ROUNDS = 10;
 const TOKEN_EXPIRY = '7d';
@@ -15,7 +16,8 @@ const RESEND_COOLDOWN_MS = 5 * 60 * 1000;
 
 // POST /password/forgot — sempre responde igual, exista a conta ou não.
 module.exports.forgotPassword = async (req, res, next) => {
-  const { email } = req.body;
+  // `lang`: idioma da página em que a pessoa pediu (pt, it ou en).
+  const { email, lang } = req.body;
 
   try {
     const user = await User.findOne({ email }).select('+passwordResetRequestedAt');
@@ -34,7 +36,8 @@ module.exports.forgotPassword = async (req, res, next) => {
         to: user.email,
         ...passwordResetEmail({
           name: user.name,
-          resetUrl: `${FRONTEND_URL}/redefinir-senha?token=${token}`,
+          resetUrl: `${siteUrl('resetPassword', lang)}?token=${token}`,
+          lang,
         }),
       });
     }

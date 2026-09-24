@@ -11,6 +11,7 @@ const {
   JWT_SECRET, FRONTEND_URL, API_URL, EMAIL_REPLY_TO,
 } = require('../utils/config');
 const MESSAGES = require('../utils/messages');
+const { normalizeLang, siteUrl } = require('../utils/siteRoutes');
 
 const SALT_ROUNDS = 10;
 const TOKEN_EXPIRY = '7d';
@@ -35,10 +36,12 @@ const sendWelcome = async (subscriber) => {
   await subscriber.save();
 
   const unsubscribeUrl = unsubscribeUrlFor(unsubscribeToken);
+  // E-mail e link de confirmação no idioma em que a pessoa se cadastrou.
   const email = welcomeEmail({
     name: subscriber.name,
-    confirmUrl: `${FRONTEND_URL}/bem-vindo?token=${token}`,
+    confirmUrl: `${siteUrl('welcome', subscriber.lang)}?token=${token}`,
     unsubscribeUrl,
+    lang: subscriber.lang,
   });
 
   await sendEmail({
@@ -182,21 +185,69 @@ module.exports.createAccount = async (req, res, next) => {
   }
 };
 
+// Textos da página de descadastro, no idioma do inscrito.
+const UNSUBSCRIBE_COPY = {
+  pt: {
+    htmlLang: 'pt-BR',
+    invalidTitle: 'Link inválido',
+    invalidText: 'Não encontramos essa inscrição. Se quiser sair da lista, responda qualquer e-mail nosso com "cancelar".',
+    invalidShort: 'Não encontramos essa inscrição.',
+    doneTitle: 'Tudo certo',
+    alreadyText: 'Esse e-mail já não recebe mais nossas mensagens.',
+    askTitle: 'Cancelar inscrição?',
+    askText: (email) => `Você não vai mais receber os e-mails da Sasso Nomad em <strong>${email}</strong>. Se tiver conta no site, ela continua funcionando.`,
+    button: 'Cancelar inscrição',
+    cancelledTitle: 'Inscrição cancelada',
+    cancelledText: 'Pronto: você não vai mais receber nossos e-mails. Mudou de ideia? É só se cadastrar de novo no site.',
+    back: 'Voltar para sassonomad.com',
+  },
+  it: {
+    htmlLang: 'it',
+    invalidTitle: 'Link non valido',
+    invalidText: 'Non abbiamo trovato questa iscrizione. Se vuoi uscire dalla lista, rispondi a una qualsiasi nostra email con "annulla".',
+    invalidShort: 'Non abbiamo trovato questa iscrizione.',
+    doneTitle: 'Tutto a posto',
+    alreadyText: 'Questa email non riceve più i nostri messaggi.',
+    askTitle: 'Annullare l\'iscrizione?',
+    askText: (email) => `Non riceverai più le email di Sasso Nomad su <strong>${email}</strong>. Se hai un account sul sito, continuerà a funzionare.`,
+    button: 'Annulla iscrizione',
+    cancelledTitle: 'Iscrizione annullata',
+    cancelledText: 'Fatto: non riceverai più le nostre email. Hai cambiato idea? Basta iscriversi di nuovo sul sito.',
+    back: 'Torna a sassonomad.com',
+  },
+  en: {
+    htmlLang: 'en',
+    invalidTitle: 'Invalid link',
+    invalidText: 'We couldn\'t find this subscription. If you want to leave the list, reply to any of our emails with "unsubscribe".',
+    invalidShort: 'We couldn\'t find this subscription.',
+    doneTitle: 'All set',
+    alreadyText: 'This email no longer receives our messages.',
+    askTitle: 'Unsubscribe?',
+    askText: (email) => `You will no longer receive Sasso Nomad emails at <strong>${email}</strong>. If you have an account on the site, it will keep working.`,
+    button: 'Unsubscribe',
+    cancelledTitle: 'Unsubscribed',
+    cancelledText: 'Done: you won\'t receive our emails anymore. Changed your mind? Just sign up again on the site.',
+    back: 'Back to sassonomad.com',
+  },
+};
+
+const copyFor = (subscriber) => UNSUBSCRIBE_COPY[normalizeLang(subscriber && subscriber.lang)];
+
 // Página HTML simples do descadastro (servida pela própria API).
-const unsubscribePage = (title, text, form = '') => `<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8">
+const unsubscribePage = (title, text, form = '', c = UNSUBSCRIBE_COPY.pt, lang = 'pt') => `<!doctype html>
+<html lang="${c.htmlLang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title} · Sasso Nomad</title></head>
 <body style="margin:0;background:#f4eee1;font-family:Helvetica,Arial,sans-serif;color:#1c2321;">
 <main style="max-width:480px;margin:10vh auto;padding:0 16px;">
 <div style="background:#6e7350;border-radius:12px 12px 0 0;padding:26px 24px;text-align:center;">
-<a href="${FRONTEND_URL}"><img src="${FRONTEND_URL}/email/logo-light.png" width="180" alt="Sasso Nomad" style="display:inline-block;width:180px;max-width:100%;height:auto;border:0;color:#f4eee1;"></a>
+<a href="${siteUrl('home', lang)}"><img src="${FRONTEND_URL}/email/logo-light.png" width="180" alt="Sasso Nomad" style="display:inline-block;width:180px;max-width:100%;height:auto;border:0;color:#f4eee1;"></a>
 </div>
 <div style="background:#fff;border-radius:0 0 12px 12px;padding:32px 28px;">
 <h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 12px;">${title}</h1>
 <p style="line-height:1.6;margin:0 0 20px;color:#5b6660;">${text}</p>
 ${form}
-<p style="margin:24px 0 0;"><a href="${FRONTEND_URL}" style="color:#565a3e;">Voltar para sassonomad.com</a></p>
+<p style="margin:24px 0 0;"><a href="${siteUrl('home', lang)}" style="color:#565a3e;">${c.back}</a></p>
 </div>
 </main></body></html>`;
 
@@ -219,21 +270,23 @@ module.exports.unsubscribeForm = async (req, res, next) => {
   try {
     const subscriber = token && await Subscriber.findOne({ unsubscribeToken: token });
     if (!subscriber) {
-      return sendPage(res, unsubscribePage(
-        'Link inválido',
-        'Não encontramos essa inscrição. Se quiser sair da lista, responda qualquer e-mail nosso com "cancelar".',
-      ), 404);
+      const c = UNSUBSCRIBE_COPY.pt;
+      return sendPage(res, unsubscribePage(c.invalidTitle, c.invalidText), 404);
     }
+    const c = copyFor(subscriber);
+    const lang = normalizeLang(subscriber.lang);
     if (subscriber.status === 'unsubscribed') {
-      return sendPage(res, unsubscribePage('Tudo certo', 'Esse e-mail já não recebe mais nossas mensagens.'));
+      return sendPage(res, unsubscribePage(c.doneTitle, c.alreadyText, '', c, lang));
     }
     const form = `<form method="post" action="/unsubscribe?token=${escapeHtml(token)}">
-<button type="submit" style="padding:12px 26px;border:none;border-radius:999px;background:#6e7350;color:#f4eee1;font-weight:bold;font-size:15px;cursor:pointer;">Cancelar inscrição</button>
+<button type="submit" style="padding:12px 26px;border:none;border-radius:999px;background:#6e7350;color:#f4eee1;font-weight:bold;font-size:15px;cursor:pointer;">${c.button}</button>
 </form>`;
     return sendPage(res, unsubscribePage(
-      'Cancelar inscrição?',
-      `Você não vai mais receber os e-mails da Sasso Nomad em <strong>${escapeHtml(subscriber.email)}</strong>. Se tiver conta no site, ela continua funcionando.`,
+      c.askTitle,
+      c.askText(escapeHtml(subscriber.email)),
       form,
+      c,
+      lang,
     ));
   } catch (err) {
     return next(err);
@@ -256,11 +309,16 @@ module.exports.unsubscribe = async (req, res, next) => {
       await subscriber.save();
     }
     if (!subscriber) {
-      return sendPage(res, unsubscribePage('Link inválido', 'Não encontramos essa inscrição.'), 404);
+      const c = UNSUBSCRIBE_COPY.pt;
+      return sendPage(res, unsubscribePage(c.invalidTitle, c.invalidShort), 404);
     }
+    const c = copyFor(subscriber);
     return sendPage(res, unsubscribePage(
-      'Inscrição cancelada',
-      'Pronto: você não vai mais receber nossos e-mails. Mudou de ideia? É só se cadastrar de novo no site.',
+      c.cancelledTitle,
+      c.cancelledText,
+      '',
+      c,
+      normalizeLang(subscriber.lang),
     ));
   } catch (err) {
     return next(err);
