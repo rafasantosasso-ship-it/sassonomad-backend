@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
       validate: {
         validator: (value) => validator.isEmail(value),
         message: 'E-mail inválido',
@@ -20,9 +22,14 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
       minlength: 2,
       maxlength: 30,
     },
+    // "Esqueci minha senha": só o hash do token fica no banco.
+    passwordResetTokenHash: { type: String, select: false, index: true },
+    passwordResetExpires: { type: Date, select: false },
+    passwordResetRequestedAt: { type: Date, select: false },
   },
   { versionKey: false },
 );

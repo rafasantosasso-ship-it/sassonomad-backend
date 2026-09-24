@@ -21,9 +21,16 @@ const { PORT, MONGODB_URI } = require('./utils/config');
 
 const app = express();
 
+// A API roda atrás do Nginx: sem isso, o rate limiter enxerga todo mundo
+// com o mesmo IP (127.0.0.1) e um único visitante bloquearia o site todo.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10kb' }));
+// Formulário "cancelar inscrição" e o one-click do Gmail enviam
+// application/x-www-form-urlencoded.
+app.use(express.urlencoded({ extended: false, limit: '10kb' }));
 app.use(rateLimiter);
 
 // Loga toda solicitação em request.log antes de qualquer rota.
